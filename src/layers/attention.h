@@ -237,8 +237,8 @@ public:
         if (doLNorm) this->norm.setWeight(gamma1, beta1, hiddenSize);
 
         // QK Norm
-        this->qNorm.setWeight(gamma2, beta2, headSize);
-        this->kNorm.setWeight(gamma3, beta3, headSize);
+        if (gamma2) this->qNorm.setWeight(gamma2, beta2, headSize);
+        if (gamma3) this->kNorm.setWeight(gamma3, beta3, headSize);
     }
 
 #ifdef XFT_DEBUG

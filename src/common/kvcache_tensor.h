@@ -155,8 +155,8 @@ public:
 #pragma omp parallel for
             for (int seq = 0; seq < seqLen; ++seq) {
                 for (int b = batchSize - 1; b > 0; --b) {
-                    T *dst = getSequence(seq, b, 0);
-                    T *src = getSequence(seq, b / beamSize, 0);
+                    auto dst = getSequence(seq, b, 0);
+                    auto src = getSequence(seq, b / beamSize, 0);
                     memcpy(dst.first, src.first, sizeof(T) * headNum * headSize);
                 }
             }

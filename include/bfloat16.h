@@ -87,9 +87,9 @@ public:
     }
 
     static inline __m256i cvt_fp32_to_bf16(const __m512 src) {
-#if (__GNUC__ > 10) || ((__GNUC__ == 10) && (__GNUC_MINOR__ >= 1))
-        return (__m256i)_mm512_cvtneps_pbh(src);
-#else
+// #if (__GNUC__ > 10) || ((__GNUC__ == 10) && (__GNUC_MINOR__ >= 1))
+//         return (__m256i)_mm512_cvtneps_pbh(src);
+// #else
         const __m512i nan = _mm512_set1_epi32(0xffff);
         const __m512i ones = _mm512_set1_epi32(0x1);
         const __m512i vec_bias = _mm512_set1_epi32(0x7fff);
@@ -102,7 +102,7 @@ public:
         result = _mm512_srli_epi32(result, 16);
         result = _mm512_mask_blend_epi32(mask, nan, result);
         return _mm512_cvtusepi32_epi16(result);
-#endif
+// #endif
     }
 
 private:
@@ -122,9 +122,9 @@ inline void bfloat16_t::cvt_float_to_bfloat16(const float *src, bfloat16_t *dst,
     const __m512i ones = _mm512_set1_epi32(0x1);
     const __m512i vec_bias = _mm512_set1_epi32(0x7fff);
 
-#if (__GNUC__ > 10) || ((__GNUC__ == 10) && (__GNUC_MINOR__ >= 1))
-    auto cvt_fp32_to_bf16 = [&](const __m512 input_vector) { return (__m256i)_mm512_cvtneps_pbh(input_vector); };
-#else
+// #if (__GNUC__ > 10) || ((__GNUC__ == 10) && (__GNUC_MINOR__ >= 1))
+//     auto cvt_fp32_to_bf16 = [&](const __m512 input_vector) { return (__m256i)_mm512_cvtneps_pbh(input_vector); };
+// #else
     auto cvt_fp32_to_bf16 = [&](const __m512 input_vector) {
         __m512i value = _mm512_castps_si512(input_vector);
         auto mask = _mm512_cmp_ps_mask(input_vector, input_vector, _CMP_ORD_Q);
@@ -135,7 +135,7 @@ inline void bfloat16_t::cvt_float_to_bfloat16(const float *src, bfloat16_t *dst,
         result = _mm512_mask_blend_epi32(mask, nan, result);
         return _mm512_cvtusepi32_epi16(result);
     };
-#endif
+// #endif
 
     int blockSize = size / kStep;
     int remainder = size % kStep;
