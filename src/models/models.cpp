@@ -1010,6 +1010,19 @@ bool Model::setStopWords(std::vector<std::vector<int>> stopWordsList) {
 
 AutoModel::AutoModel(std::string modelPath, xft::DataType dataType, xft::DataType KVCacheDataType) : Model() {
     std::string configPath = modelPath + "/config.ini";
+    printf("modelPath：%s\n", modelPath.c_str() );
+    
+    // 判断路径是否存在
+    if (!std::filesystem::exists(modelPath)) {
+        std::cerr << "Error: The model path does not exist: " << modelPath << std::endl;
+        exit(-1); 
+    }
+
+    // 判断配置文件是否存在
+    if (!std::filesystem::exists(configPath)) {
+        std::cerr << "Error: The config file does not exist: " << configPath << std::endl;
+        exit(-1);
+    }
     INIReader reader = INIReader(configPath);
 
     if (reader.ParseError() < 0) {
