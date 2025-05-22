@@ -161,7 +161,7 @@ public:
     // inplace reducing is supported
     template <typename T>
     void reduceAddBase(T *sendBuf, T *recvBuf, size_t count) {
-        TimeLine t("Messenger.reduceAdd");
+        TimeLine t("Messenger.reduceAddBase");
 
 #ifdef USE_SHM
         if (!localRanksFlag || pshm == nullptr || sizeof(T) * count > pshm->getSHMSize()) {

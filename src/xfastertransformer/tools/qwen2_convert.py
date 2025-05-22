@@ -30,10 +30,13 @@ class Qwen2Convert(BaseModelConvert):
     Convert Qwen model. Use https://huggingface.co/Qwen or https://modelscope.cn/models
     """
 
+    SUPPORTED_DTYPES = {"bf16": np.uint16, "fp32": np.float32, "fp16": np.float16}
     def __init__(self):
         super().__init__()
+        self.default_dtype = "bf16"
 
     def split_and_convert_process(self, i, saved_dir, factor, key, val, num_attention_heads, num_key_value_heads):
+
         def save_val(val, key, tp_num=None):
             if key.startswith("model."):
                 path = os.path.join(saved_dir, key)
@@ -98,22 +101,21 @@ class Qwen2Convert(BaseModelConvert):
             os.makedirs(saved_dir)
 
         # load the model
-        gen_config = GenerationConfig.from_pretrained(input_dir, trust_remote_code=True, resume_download=True)
+        # gen_config = GenerationConfig.from_pretrained(input_dir, trust_remote_code=True, resume_download=True)
         hf_config, _ = AutoConfig.from_pretrained(
-            input_dir, return_unused_kwargs=True, trust_remote_code=True, fp16=True, use_flash_attn=False
+            input_dir, return_unused_kwargs=True, trust_remote_code=True, use_flash_attn=False
         )
 
         # load the model
         model = AutoModelForCausalLM.from_pretrained(
             input_dir,
             load_in_8bit=False,
-            torch_dtype=torch.float16,
             low_cpu_mem_usage=True,
+            torch_dtype="auto",
             device_map="auto",
         )
 
         hf_config = {
-            **vars(gen_config),
             **vars(hf_config),
         }
 
@@ -143,7 +145,8 @@ class Qwen2Convert(BaseModelConvert):
             config[sec_name]["vocab_size"] = str(hf_config["vocab_size"])
             config[sec_name]["start_id"] = str(hf_config["bos_token_id"])
             config[sec_name]["end_id"] = str(hf_config["eos_token_id"])
-            config[sec_name]["pad_id"] = str(gen_config.pad_token_id)
+            config[sec_name]["pad_id"] = str(hf_config["pad_token_id"])
+            # config[sec_name]["pad_id"] = str(gen_config.pad_token_id)
             config[sec_name]["weight_data_type"] = dtype
             config[sec_name]["attn_params_type"] = "GQAttnParams"
             config[sec_name]["ffn_params_type"] = "LlamaFFNParams"
@@ -179,7 +182,7 @@ class Qwen2Convert(BaseModelConvert):
         state_dict = model.state_dict()
         model_named_parameters = dict()
         for name, param in state_dict.items():
-            # print(f"name = {name}")
+            print(f"name = {name} state_dict.items() param = {type(param)} {param.dtype} ")
             # merge QKV
             if "self_attn.q_proj.weight" in name:
                 k_name = name.replace("q_proj", "k_proj")
@@ -195,7 +198,7 @@ class Qwen2Convert(BaseModelConvert):
                 continue
             # merge QKV bias
             if "self_attn.q_proj.bias" in name:
-                print(f"name = {name}")
+                # print(f"name = {name}")
                 k_name = name.replace("q_proj", "k_proj")
                 v_name = name.replace("q_proj", "v_proj")
                 qkv_bias = torch.cat((param, state_dict[k_name], state_dict[v_name]))
@@ -218,15 +221,19 @@ class Qwen2Convert(BaseModelConvert):
 
         pool = multiprocessing.Pool(processes)
         for name, param in model_named_parameters.items():
-            param = param.half()
+            # param = param.half()
+            print(
+                f"name= {name} dtype = {param.dtype} shape = {param.shape} "
+                f"torch_dtype = {self.torch_dtype} torch_view_dtype = {self.torch_view_dtype}"
+            )
             if name == "model.embed_tokens.weight":
-                param.detach().cpu().numpy().astype(self.dtype).tofile(os.path.join(output_dir, "model.wte.bin"))
+                param.detach().to(self.torch_dtype).view(self.torch_view_dtype).cpu().numpy().tofile(os.path.join(output_dir, "model.wte.bin"))
             elif name == "model.norm.weight":
-                param.detach().cpu().numpy().astype(self.dtype).tofile(
+                param.detach().to(self.torch_dtype).view(self.torch_view_dtype).cpu().numpy().tofile(
                     os.path.join(output_dir, "model.final_layernorm.weight.bin")
                 )
             elif name == "lm_head.weight":
-                param.detach().cpu().numpy().astype(self.dtype).tofile(
+                param.detach().to(self.torch_dtype).view(self.torch_view_dtype).cpu().numpy().tofile(
                     os.path.join(saved_dir, "model.lm_head.weight.bin")
                 )
             else:
@@ -241,7 +248,7 @@ class Qwen2Convert(BaseModelConvert):
                                 saved_dir,
                                 factor,
                                 new_name,
-                                param.detach().cpu().numpy().astype(self.dtype),
+                                param.detach().to(self.torch_dtype).view(self.torch_view_dtype).cpu().numpy(),
                                 num_attention_heads,
                                 num_key_value_heads,
                             )
@@ -251,6 +258,9 @@ class Qwen2Convert(BaseModelConvert):
         pool.join()
 
         print(f"{saved_dir} export successful!")
+
+    # def split_and_convert_quantized_model(self, input_dir, output_dir, dtype, processes, from_quantized_model):
+    #     raise NotImplementedError("Quantized model conversion for qwen2 model is not implemented yet.")
 
     def split_and_convert_quantized_model(self, input_dir, output_dir, dtype, processes, from_quantized_model):
         """
@@ -271,10 +281,15 @@ class Qwen2Convert(BaseModelConvert):
 
         # load AutoGPTQ quantized model
         from transformers import GPTQConfig
+
         # don't panic here bits=4, if your model is quantized to int8, the latter code will correct the bits.
-        gptq_config = GPTQConfig(bits=4, use_exllama=False) 
-        model = AutoModelForCausalLM.from_pretrained(input_dir, torch_dtype="auto", device_map="auto",
-                                                     quantization_config=gptq_config)
+        gptq_config = GPTQConfig(bits=4, use_exllama=False)
+        model = AutoModelForCausalLM.from_pretrained(
+            input_dir, torch_dtype="auto", device_map="cpu", quantization_config=gptq_config
+        )
+        # model = AutoModelForCausalLM.from_pretrained(
+        #     input_dir, torch_dtype=torch.float32, device_map="cpu", quantization_config=gptq_config
+        # )
         hf_config = vars(model.config)
         quantize_config = model.config.quantization_config
 
@@ -304,18 +319,20 @@ class Qwen2Convert(BaseModelConvert):
             config[sec_name]["vocab_size"] = str(hf_config["vocab_size"])
             config[sec_name]["start_id"] = str(hf_config["bos_token_id"])
             config[sec_name]["end_id"] = str(hf_config["eos_token_id"])
+            config[sec_name]["pad_id"] = str(hf_config["pad_token_id"])
+            # config[sec_name]["pad_id"] = str(gen_config.pad_token_id)
             config[sec_name]["weight_data_type"] = dtype
             config[sec_name]["attn_params_type"] = "GQAttnParams"
             config[sec_name]["ffn_params_type"] = "LlamaFFNParams"
 
-            self.wbits = quantize_config["bits"]
+            self.wbits = quantize_config.bits
             assert self.wbits == 8 or self.wbits == 4, "Only 4/8bits quantization is supported"
             config[sec_name]["quant_qweight_data_type"] = "int8" if self.wbits == 8 else "uint4"
             config[sec_name]["quant_scales_data_type"] = "fp32"
             config[sec_name]["quant_zeros_data_type"] = "fp32"
-            assert quantize_config["group_size"] == -1, "Only column wise quantization is supported."
-            config[sec_name]["quant_groupsize"] = str(quantize_config["group_size"])
-            # config[sec-name]["quant_scheme"] = "sym" if quantize_config["sym"] == True else "asym"
+            assert quantize_config.group_size == -1, "Only column wise quantization is supported."
+            config[sec_name]["quant_groupsize"] = str(quantize_config.group_size)
+            config[sec_name]["quant_scheme"] = "sym" if quantize_config.sym == True else "asym"
 
             with open(os.path.join(saved_dir, "config.ini"), "w") as configfile:
                 config.write(configfile)
@@ -367,11 +384,11 @@ class Qwen2Convert(BaseModelConvert):
 
         print("Processing ...")
         state_dict = model.state_dict()
-        model_named_parameters = dict()
 
         # merge QKV
         new_state_dict = dict()
         for name, param in state_dict.items():
+            print(f"state_dict: Name: {name} param.dtype: {param.dtype}")
             if "self_attn.q_proj" in name:
                 k_name = name.replace("q_proj", "k_proj")
                 v_name = name.replace("q_proj", "v_proj")
@@ -381,9 +398,13 @@ class Qwen2Convert(BaseModelConvert):
                 continue
             else:
                 new_state_dict[name] = param
-        state_dict = new_state_dict
-
-        for name, param in state_dict.items():
+        # state_dict = new_state_dict
+        print("-" * 50)
+        print("-" * 50)
+        print("-" * 50)
+        model_named_parameters = dict()
+        for name, param in new_state_dict.items():
+            print(f"new_state_dict: Name: {name} param.dtype: {param.dtype}")
             if name.startswith("model."):
                 name = name[6:]
             wf = torch.tensor(list(range(0, 32, self.wbits)), dtype=torch.int32).unsqueeze(0)
@@ -396,6 +417,8 @@ class Qwen2Convert(BaseModelConvert):
                 model_named_parameters[name] = param
             elif "scales" in name:
                 # scales is fp16 in AutoQPTQ, convert to fp32 for xFT.
+                # model_named_parameters[name] = param.float()
+                # scales is bf16 in QPTQModel, no convert.
                 model_named_parameters[name] = param.float()
             elif "qzeros" in name:
                 # get qzeros
@@ -412,7 +435,7 @@ class Qwen2Convert(BaseModelConvert):
                 if self.wbits == 8:
                     qzeros = qzeros - 128  # uint8 to int8
                 qzeros = torch.flatten(qzeros).float()
-                scales = state_dict["model." + name.replace("qzeros", "scales")].float()
+                scales = new_state_dict["model." + name.replace("qzeros", "scales")].float()
                 zeros = -scales * qzeros
                 model_named_parameters[name] = zeros
             elif "qweight" in name:
@@ -437,12 +460,21 @@ class Qwen2Convert(BaseModelConvert):
                 model_named_parameters[name] = qweight.to(torch.int8)
             else:
                 model_named_parameters[name] = param.permute(1, 0) if len(param.shape) == 2 else param
-
+        print("-" * 50)
+        print("-" * 50)
+        print("-" * 50)
         pool = multiprocessing.Pool(processes)
         for name, param in model_named_parameters.items():
-            if name == "model.embed_tokens.weight":
-                param.detach().cpu().numpy().astype(self.dtype).tofile(os.path.join(output_dir, "model.wte.bin"))
-            elif name == "model.norm.weight":
+            print(f"model_named_parameters: Name: {name} param.dtype: {param.dtype} Param: {param}")
+            # print(f"Param: \n{param}")
+            # print(f"Data Type (dtype): {param.dtype}")
+            # print(f"Shape: {param.shape}")
+            # print(f"Requires Grad: {param.requires_grad}")
+            # print(f"Device: {param.device}")
+            if name == "embed_tokens.weight":
+                param.detach().cpu().numpy().astype(self.dtype).tofile(
+                    os.path.join(output_dir, "model.wte.bin"))
+            elif name == "norm.weight":
                 param.detach().cpu().numpy().astype(self.dtype).tofile(
                     os.path.join(output_dir, "model.final_layernorm.weight.bin")
                 )
@@ -451,11 +483,12 @@ class Qwen2Convert(BaseModelConvert):
                     os.path.join(saved_dir, "model.lm_head.weight.bin")
                 )
             else:
+                print(f" Name: {name}" , "param.sum:", { torch.sum(param).item() })
                 starmap_args = []
                 dtype = self.dtype
                 if "qweight" in name:
                     dtype = np.int8
-                if "qzero" in name or "scales" in name:
+                if "qzeros" in name or "scales" in name:
                     dtype = np.float32
                 for i in range(len(hf_model_name_pattern)):
                     if hf_model_name_pattern[i] in name:

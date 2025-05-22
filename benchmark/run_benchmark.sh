@@ -143,8 +143,12 @@ if [ "${model_path}" == "" ] || [ "${token_path}" == "" ]; then
     token_path=""
 fi
 
-model_path=${model_path:-"${SCRIPT_DIR}"/../examples/model_config/${model_name}/}
-token_path=${token_path:-"${SCRIPT_DIR}"/../examples/model_config/${model_name}/}
+# oneapi_bindings_for_pytorch_path=/opt/intel/oneapi/
+# source $oneapi_bindings_for_pytorch_path/setvars.sh
+
+
+model_path=${model_path:-"${SCRIPT_DIR}"/model_config/${model_name}/}
+token_path=${token_path:-"${SCRIPT_DIR}"/model_config/${model_name}/}
 dtype=${dtype:-bf16}
 kv_cache_dtype=${kv_cache_dtype:-fp16}
 sockets=${sockets:-1}
@@ -169,7 +173,7 @@ Warning "The mapping method for CPU IDs in the cloud server environment is diffe
         you can enable \`export XFT_CLOUD_ENV=1\` to bind to the correct physical core."
 export XFT_CLOUD_ENV=${XFT_CLOUD_ENV:-0}
 
-benchmark_cmd="python "${SCRIPT_DIR}"/benchmark.py \
+benchmark_cmd="python3 "${SCRIPT_DIR}"/benchmark.py \
     --token_path "${token_path}" \
     --model_path "${model_path}" \
     --prompt_path "${prompt_path}" \
@@ -180,7 +184,8 @@ benchmark_cmd="python "${SCRIPT_DIR}"/benchmark.py \
     --token_in ${input_tokens}	\
     --token_out ${output_tokens} \
     --iteration ${iter} \
-    --warmup ${warmup}"
+    --warmup ${warmup} \
+    --padding False"
 
 if [ -n $sonnet_prefix_len ]; then
     benchmark_cmd+=" --sonnet_prefix_len ${sonnet_prefix_len}"
@@ -201,8 +206,10 @@ fi
 sockets_num=$(lscpu | grep "Socket(s)" | awk -F ':' '{print $2}')
 cores_per_socket=$(lscpu | grep "Core(s) per socket" | awk -F ':' '{print $2}')
 numa_nodes=$(lscpu | grep "NUMA node(s)" | awk -F ':' '{print $2}')
+Info "numa_nodes: ${numa_nodes}"
 # Multiply by 2 to avoid an float result in HBM flat mode that the NUMA count twice and it will be divided later.
 cores_per_numa=$(($sockets_num * $cores_per_socket * 2 / $numa_nodes))
+Info "cores_per_numa: ${cores_per_numa}"
 
 if [ "${sockets_num}" -lt "${sockets}" ] && [ "${numa_nodes}" -lt "${sockets}" ]; then
     Error "The number of available sockets (${sockets_num}) and numa nodes (${numa_nodes}) are less than the requested sockets (${sockets})."
@@ -216,11 +223,9 @@ fi
 
 export BENCHMARK=$benchmark_cmd
 
-if [ -f "${SCRIPT_DIR}/../3rdparty/mkl/lib/libiomp5.so" ]; then
-    export LD_PRELOAD="${SCRIPT_DIR}/../3rdparty/mkl/lib/libiomp5.so"
-else
-    export $(python -c 'import xfastertransformer as xft; print(xft.get_env())')
-fi
+# export LD_PRELOAD="/opt/intel/oneapi/2025.1/lib/libiomp5.so"
+export $(python3 -c 'import xfastertransformer as xft; print(xft.get_env())')
+
 
 if [ "${numa_nodes}" -eq 16 ]; then
     #HBM flat SNC-4 mode, Confirm that there are 8 HBM memory nodes and 8 DRAM memory nodes through "numactl -H"
