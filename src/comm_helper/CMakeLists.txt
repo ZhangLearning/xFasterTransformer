@@ -21,4 +21,7 @@ target_link_libraries(xft_comm_helper ${MPI_LIBS} ccl)
 
 if(NOT MPI_FOUND OR NOT oneCCL_FOUND)
     add_dependencies(xft_comm_helper oneccl)
+else()
+    include_directories(${MPI_INCLUDE_DIRS})
+    include_directories(${ONECCL_INCLUDE_DIRS})
 endif()

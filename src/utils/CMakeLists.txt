@@ -19,3 +19,6 @@ aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR} UTILS_SRCS)
 add_library(utils OBJECT ${UTILS_SRCS})
 
 add_dependencies(utils ${DEPEND_LIST})
+
+include_directories(${MPI_INCLUDE_DIRS})
+include_directories(${ONECCL_INCLUDE_DIRS})
