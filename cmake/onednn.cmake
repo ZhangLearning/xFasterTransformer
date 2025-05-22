@@ -31,9 +31,7 @@ endif()
 
 set(ONEDNN_3rdparty_DIR "${CMAKE_SOURCE_DIR}/3rdparty/onednn")
 
-set(ONEDNN_TAG "v3.5")
-
-set(SKIP_FLAG FALSE)
+set(ONEDNN_TAG "v3.7.3")
 
 if(EXISTS ${ONEDNN_3rdparty_DIR})
     file(GLOB FILES "${ONEDNN_3rdparty_DIR}/*")
@@ -54,17 +52,17 @@ if(EXISTS ${ONEDNN_3rdparty_DIR})
         message(STATUS "Current TAG of OneDNN : ${CURRENT_TAG}")
 
         if(CURRENT_TAG STREQUAL ${ONEDNN_TAG})
-            set(SKIP_FLAG TRUE)
+            set(SKIP_BUILD_3RDPARTY_FLAG TRUE)
         endif()
     else()
         file(REMOVE_RECURSE ${ONEDNN_3rdparty_DIR})
     endif()
 endif()
 
-if(NOT SKIP_FLAG)
+if(NOT SKIP_BUILD_3RDPARTY_FLAG)
     # cmake-format: off
     ExternalProject_Add(onednn
-      GIT_REPOSITORY    https://github.com/oneapi-src/oneDNN.git
+      GIT_REPOSITORY    https://github.com/uxlfoundation/oneDNN.git
       GIT_TAG           ${ONEDNN_TAG}
       SOURCE_DIR        ${ONEDNN_3rdparty_DIR}
       BINARY_DIR        ${ONEDNN_3rdparty_DIR}

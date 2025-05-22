@@ -24,6 +24,7 @@ project(dependency NONE)
 
 include(ExternalProject)
 
+if(NOT SKIP_BUILD_3RDPARTY_FLAG)
 # cmake-format: off
 ExternalProject_Add(xdnn_lib
   URL               https://github.com/intel/xFasterTransformer/releases/download/IntrinsicGemm/xdnn_v1.5.9.tar.gz
@@ -36,3 +37,9 @@ ExternalProject_Add(xdnn_lib
   TEST_COMMAND      ""
 )
 # cmake-format: on
+else()
+  if(NOT TARGET xdnn_lib)
+      add_library(xdnn_lib INTERFACE)
+  endif()
+  message(STATUS "xdnn_lib directory already exists. Skipping installation.")
+endif()

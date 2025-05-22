@@ -24,16 +24,23 @@ project(dependency NONE)
 
 include(ExternalProject)
 
+if(NOT SKIP_BUILD_3RDPARTY_FLAG)
 # cmake-format: off
-ExternalProject_Add(jsoncpp_lib
-  URL               https://github.com/open-source-parsers/jsoncpp/archive/refs/tags/1.8.4.tar.gz
-  URL_HASH          MD5=fa47a3ab6b381869b6a5f20811198662
-  TIMEOUT           60
-  SOURCE_DIR        ./jsoncpp-prefix
-  BINARY_DIR        ./jsoncpp-prefix
-  CONFIGURE_COMMAND ${CMAKE_COMMAND} -E make_directory "build" && ${CMAKE_COMMAND} -E chdir "build" ${CMAKE_COMMAND} -DCMAKE_CXX_FLAGS=-fPIC -DCMAKE_BUILD_TYPE=release -DBUILD_STATIC_LIBS=ON -DBUILD_SHARED_LIBS=ON -DJSONCPP_WITH_TESTS=OFF -DJSONCPP_WITH_POST_BUILD_UNITTEST=OFF -DCMAKE_INSTALL_PREFIX=${CMAKE_SOURCE_DIR}/3rdparty/jsoncpp ..
-  BUILD_COMMAND     ${CMAKE_COMMAND} -E chdir "build" make
-  INSTALL_COMMAND   ${CMAKE_COMMAND} -E chdir "build" make install
-  TEST_COMMAND      ""
-)
+  ExternalProject_Add(jsoncpp_lib
+    URL               https://github.com/open-source-parsers/jsoncpp/archive/refs/tags/1.9.6.tar.gz
+    URL_HASH          MD5=bf641b36615341b31ef917f104318608
+    TIMEOUT           60
+    SOURCE_DIR        ./jsoncpp-prefix
+    BINARY_DIR        ./jsoncpp-prefix
+    CONFIGURE_COMMAND ${CMAKE_COMMAND} -E make_directory "build" && ${CMAKE_COMMAND} -E chdir "build" ${CMAKE_COMMAND} -DCMAKE_CXX_FLAGS=-fPIC -DCMAKE_BUILD_TYPE=release -DBUILD_STATIC_LIBS=ON -DBUILD_SHARED_LIBS=OFF -DJSONCPP_WITH_TESTS=OFF -DJSONCPP_WITH_POST_BUILD_UNITTEST=OFF -DCMAKE_INSTALL_PREFIX=${CMAKE_SOURCE_DIR}/3rdparty/jsoncpp ..
+    BUILD_COMMAND     ${CMAKE_COMMAND} -E chdir "build" make -j
+    INSTALL_COMMAND   ${CMAKE_COMMAND} -E chdir "build" make install
+    TEST_COMMAND      ""
+  )
 # cmake-format: on
+else()
+  if(NOT TARGET jsoncpp_lib)
+      add_library(jsoncpp_lib INTERFACE)
+  endif()
+  message(STATUS "jsoncpp_lib directory already exists. Skipping installation.")
+endif()
