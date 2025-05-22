@@ -25,7 +25,7 @@ set(MKL_3rdparty_DIR "${CMAKE_SOURCE_DIR}/3rdparty/mkl")
 if(NOT EXISTS ${MKL_3rdparty_DIR})
     find_package(Python COMPONENTS Interpreter Development)
     execute_process(COMMAND ${Python_EXECUTABLE} -m pip install --force-reinstall
-                            --prefix=${MKL_3rdparty_DIR} mkl-static==2024.0.0 mkl-include==2024.0.0
+                            --prefix=${MKL_3rdparty_DIR} mkl-static==2025.1.0 mkl-include==2025.1.0
                     RESULT_VARIABLE EXIT_CODE)
 
     if(NOT ${EXIT_CODE} EQUAL 0)

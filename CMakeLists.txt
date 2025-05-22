@@ -18,56 +18,65 @@ project(xfastertransformer LANGUAGES C CXX)
 
 # Enable GPU
 option(WITH_GPU "Build with GPU" OFF)
-if(WITH_GPU)
-    message(STATUS "Notice: Building with GPU.")
-    add_definitions(-DXFT_GPU=true)
-    # Get compiler version
-    execute_process(COMMAND ${CMAKE_CXX_COMPILER} --version
-                    OUTPUT_VARIABLE ICPX_VERSION
-                    OUTPUT_STRIP_TRAILING_WHITESPACE)
-    message(STATUS "Notice: ICPX version: ${ICPX_VERSION}")
-else()
-    message(STATUS "Notice: Building with CPU.")
-    # Get compiler version
-    execute_process(COMMAND ${CMAKE_CXX_COMPILER} -dumpfullversion
-                    OUTPUT_VARIABLE GCC_VERSION
-                    OUTPUT_STRIP_TRAILING_WHITESPACE)
-    message(STATUS "Notice: GCC version: ${GCC_VERSION}")
-endif()
+# if(WITH_GPU)
+# add_definitions(-DXFT_GPU=true)
+# Get compiler version
+message(STATUS "Notice: Building ...")
+execute_process(COMMAND ${CMAKE_CXX_COMPILER} --version
+                OUTPUT_VARIABLE ICPX_VERSION
+                ERROR_QUIET
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
+message(STATUS "Notice: ICPX version: ${ICPX_VERSION}")
+# else()
+message(STATUS "Notice: Building with CPU.")
+# Get compiler version
+execute_process(COMMAND ${CMAKE_CXX_COMPILER} -dumpfullversion
+                OUTPUT_VARIABLE GCC_VERSION
+                ERROR_QUIET
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
+message(STATUS "Notice: GCC version: ${GCC_VERSION}")
+# endif()
+
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512f -mavx512bw -mavx512vl -fPIC -D_GLIBCXX_USE_CXX11_ABI=1")
-if(WITH_GPU)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -qopenmp -fsycl -fsycl-device-code-split=per_kernel -lOpenCL")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -fPIC -D_GLIBCXX_USE_CXX11_ABI=1")
+
+# 判断是否使用 icpx 编译器
+message(STATUS "Notice: CMAKE_CXX_COMPILER_ID: ${CMAKE_CXX_COMPILER_ID}")
+
+if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Intel")
+    message(STATUS "Using icpx compiler: enabling -qopenmp")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -qopenmp")
 else()
+    message(STATUS "Using non-icpx compiler: enabling -fopenmp")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
 endif()
 
 # GCC>=10.1 should support avx512bf16, but need to double check as some versions have issues
-if(GCC_VERSION VERSION_GREATER_EQUAL "10.1")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512bf16")
+# if(GCC_VERSION VERSION_GREATER_EQUAL "10.1")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512bf16 -mavx512vl")
 
-    # Source code for BF16 test
-    set(TEST_SOURCE_CODE "#include <immintrin.h>\n#include <cstdio>\nint main() { int buf[8]; _mm256_mask_storeu_epi32((void *)buf, 0xff, (__m256i)_mm512_cvtneps_pbh(_mm512_set1_ps(1.0f))); printf(\"%d\", buf[0]); }")
+# Source code for BF16 test
+set(TEST_SOURCE_CODE "#include <immintrin.h>\n#include <cstdio>\nint main() { int buf[8]; _mm256_mask_storeu_epi32((void *)buf, 0xff, (__m256i)_mm512_cvtneps_pbh(_mm512_set1_ps(1.0f))); printf(\"%d\", buf[0]); }")
 
-    # Create a temporary file for BF16 test program
-    file(WRITE ${CMAKE_BINARY_DIR}/test_avx512bf16.cpp "${TEST_SOURCE_CODE}")
+# Create a temporary file for BF16 test program
+file(WRITE ${CMAKE_BINARY_DIR}/test_avx512bf16.cpp "${TEST_SOURCE_CODE}")
 
-    # Try to compile the BF16 test program
-    try_compile(SUPPORTS_FEATURE
-        ${CMAKE_BINARY_DIR}/test_avx512bf16
-        ${CMAKE_BINARY_DIR}/test_avx512bf16.cpp
-        OUTPUT_VARIABLE TRY_COMPILE_OUTPUT
-        )
+# Try to compile the BF16 test program
+try_compile(SUPPORTS_FEATURE
+    ${CMAKE_BINARY_DIR}/test_avx512bf16
+    ${CMAKE_BINARY_DIR}/test_avx512bf16.cpp
+    OUTPUT_VARIABLE TRY_COMPILE_OUTPUT
+    )
 
-    file(REMOVE ${CMAKE_BINARY_DIR}/test_avx512bf16.cpp)
-    file(REMOVE_RECURSE ${CMAKE_BINARY_DIR}/test_avx512bf16)
+# file(REMOVE ${CMAKE_BINARY_DIR}/test_avx512bf16.cpp)
+# file(REMOVE_RECURSE ${CMAKE_BINARY_DIR}/test_avx512bf16)
 
-    # Check the result and show an error message if the feature is not supported
-    if(NOT SUPPORTS_FEATURE)
-        message(FATAL_ERROR "Error: Your compiler has issues to support avx512bf16.\n We recommend GCC version >= 12.3.0")
-    endif()
+# Check the result and show an error message if the feature is not supported
+if(NOT SUPPORTS_FEATURE)
+    message(FATAL_ERROR "Error: Your compiler has issues to support avx512bf16.\n We recommend GCC version >= 12.3.0")
 endif()
+# endif()
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
@@ -93,7 +102,9 @@ if(EXISTS "${LOC_PATH}")
     )
 endif()
 
-include("cmake/mklml.cmake")
+set(SKIP_BUILD_3RDPARTY_FLAG TRUE)
+
+# include("cmake/mklml.cmake")
 include("cmake/onednn.cmake")
 include("cmake/xdnn.cmake")
 include("cmake/mkl.cmake")
@@ -127,21 +138,24 @@ if(WITH_GPU)
 endif()
 
 find_package(oneCCL REQUIRED)
-
 if(MPI_FOUND AND oneCCL_FOUND)
-    set(MPI_LIBS MPI::MPI_CXX)
-
     message(STATUS "oneCCL & MPI found. Using found oneCCL instead of building from source.")
+    set(MPI_LIBS MPI::MPI_CXX)
+    get_target_property(ONECCL_INCLUDE_DIRS oneCCL INTERFACE_INCLUDE_DIRECTORIES)
+    get_target_property(MPI_INCLUDE_DIRS MPI::MPI_CXX INTERFACE_INCLUDE_DIRECTORIES)
+    message(STATUS "mpi include directories: ${MPI_INCLUDE_DIRS}")
+    message(STATUS "oneCCL include directories: ${ONECCL_INCLUDE_DIRS}")
+
 else()
-    message(STATUS "oneCCL or MPI not found. Build oneCCL from source.")
+    message(FATAL_ERROR  "oneCCL or MPI not found. exit build!!!!")
 
-    include("cmake/oneccl.cmake")
-    list(APPEND DEPEND_LIST "oneccl")
-    set(MPI_LIBS "mpicxx" "mpi" "rt" "dl")
+    # include("cmake/oneccl.cmake")
+    # list(APPEND DEPEND_LIST "oneccl")
+    # set(MPI_LIBS "mpicxx" "mpi" "rt" "dl")
 
-    include_directories(${CMAKE_SOURCE_DIR}/3rdparty/oneccl/build/_install/include)
-    link_directories(${CMAKE_SOURCE_DIR}/3rdparty/oneccl/build/_install/lib)
-    link_directories(${CMAKE_SOURCE_DIR}/3rdparty/oneccl/build/_install/lib/prov)
+    # include_directories(${CMAKE_SOURCE_DIR}/3rdparty/oneccl/build/_install/include)
+    # link_directories(${CMAKE_SOURCE_DIR}/3rdparty/oneccl/build/_install/lib)
+    # link_directories(${CMAKE_SOURCE_DIR}/3rdparty/oneccl/build/_install/lib/prov)
 endif()
 
 set(3RDPART_LIB_LIST "rt" "dl" "dnnl" "numa")
@@ -178,20 +192,20 @@ if(WITH_GPU)
     add_definitions(-DAVX512_FP32_WEIGHT_ONLY_NF4=true)
 else()
     # Enable AVX512_FP16 optimization
-    # add_definitions(-DAVX512_FP32_WEIGHT_ONLY_FP16=true)
-    add_definitions(-DAVX512_FP16_WEIGHT_ONLY_FP16=true)
-    add_definitions(-DAVX512_BF16_WEIGHT_ONLY_BF16=true)
-    # add_definitions(-DAVX512_FP32_WEIGHT_ONLY_INT8=true)
-    add_definitions(-DAVX512_FP16_WEIGHT_ONLY_INT8=true)
-    # add_definitions(-DAVX512_FP32_WEIGHT_ONLY_INT4=true)
-    add_definitions(-DAVX512_FP16_WEIGHT_ONLY_INT4=true)
-    add_definitions(-DAVX512_FP32_WEIGHT_ONLY_NF4=true)
-    # add_definitions(-DAVX512_FP16_WEIGHT_ONLY_NF4=true)
+    # add_definitions(-DAVX512_FP16_WEIGHT_ONLY_FP16=true)
+    # add_definitions(-DAVX512_FP16_WEIGHT_ONLY_INT8=true)
+    # add_definitions(-DAVX512_FP16_WEIGHT_ONLY_INT4=true)
+    # add_definitions(-DAVX512_BF16_WEIGHT_ONLY_BF16=true)
+    # add_definitions(-DAVX512_FP32_WEIGHT_ONLY_BF16=true)
+    add_definitions(-DAVX512_FP32_WEIGHT_ONLY_FP16=true)
+    add_definitions(-DAVX512_FP32_WEIGHT_ONLY_INT8=true)
+    add_definitions(-DAVX512_FP32_WEIGHT_ONLY_INT4=true)
+    # add_definitions(-DAVX512_FP32_WEIGHT_ONLY_NF4=true)
     # Enable AMX_FP16 optimization 
     # add_definitions(-DAMX_FP16_WEIGHT_ONLY_FP16=true)
 endif()
 
-add_definitions(-DUSE_SHM=true)
+# add_definitions(-DUSE_SHM=true)
 option(XFT_BUILD_TESTS "Build xfastertransformer unit tests" OFF)
 if(XFT_BUILD_TESTS)
     add_definitions(-DUNDEBUG=true)
@@ -205,8 +219,9 @@ if(WITH_TIMELINE)
     include("cmake/jsoncpp.cmake")
     include_directories(${CMAKE_SOURCE_DIR}/3rdparty/jsoncpp/include)
     link_directories(${CMAKE_SOURCE_DIR}/3rdparty/jsoncpp/${CMAKE_INSTALL_LIBDIR})
-    list(APPEND 3RDPART_LIB_LIST "jsoncpp_static")
+    list(APPEND 3RDPART_LIB_LIST "jsoncpp")
     list(APPEND DEPEND_LIST "jsoncpp_lib")
+    message(STATUS "3rdparty libs: ${3RDPART_LIB_LIST}")
 endif()
 
 # .so file

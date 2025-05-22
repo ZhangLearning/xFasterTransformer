@@ -29,16 +29,23 @@ set(SP_BUILD_OPTIONS "${SP_BUILD_OPTIONS};-DCMAKE_CXX_FLAGS=-D_GLIBCXX_USE_CXX11
 
 set(SP_3rdparty_DIR "${CMAKE_SOURCE_DIR}/3rdparty/sentencepiece")
 
-# cmake-format: off
-ExternalProject_Add(sentencepiece_lib
-  URL               https://github.com/google/sentencepiece/releases/download/v0.1.99/sentencepiece-0.1.99.tar.gz
-  URL_HASH          MD5=6af04027121d138eb12c458a53df937e
-  TIMEOUT           60
-  SOURCE_DIR        ./sentencepiece-prefix
-  BINARY_DIR        ./sentencepiece-prefix
-  CONFIGURE_COMMAND ${CMAKE_COMMAND} -E make_directory "build" && ${CMAKE_COMMAND} -E chdir "build" ${CMAKE_COMMAND} ${SP_BUILD_OPTIONS} -DCMAKE_INSTALL_PREFIX=${SP_3rdparty_DIR} ../sentencepiece
-  BUILD_COMMAND     ${CMAKE_COMMAND} -E chdir "build" make -j 
-  INSTALL_COMMAND   ${CMAKE_COMMAND} -E chdir "build" make install
-  TEST_COMMAND      ""
-)
-# cmake-format: on
+if(NOT SKIP_BUILD_3RDPARTY_FLAG)
+  # cmake-format: off
+  ExternalProject_Add(sentencepiece_lib
+    URL               https://github.com/google/sentencepiece/releases/download/v0.2.0/sentencepiece-0.2.0.tar.gz
+    URL_HASH          MD5=7fd05c21286562fb4ce24f73f751ffee
+    TIMEOUT           60
+    SOURCE_DIR        ./sentencepiece-prefix
+    BINARY_DIR        ./sentencepiece-prefix
+    CONFIGURE_COMMAND ${CMAKE_COMMAND} -E make_directory "build" && ${CMAKE_COMMAND} -E chdir "build" ${CMAKE_COMMAND} ${SP_BUILD_OPTIONS} -DCMAKE_INSTALL_PREFIX=${SP_3rdparty_DIR} ../sentencepiece
+    BUILD_COMMAND     ${CMAKE_COMMAND} -E chdir "build" make -j 
+    INSTALL_COMMAND   ${CMAKE_COMMAND} -E chdir "build" make install
+    TEST_COMMAND      ""
+  )
+  # cmake-format: on
+else()
+  if(NOT TARGET sentencepiece_lib)
+      add_library(sentencepiece_lib INTERFACE)
+  endif()
+  message(STATUS "sentencepiece_lib directory already exists. Skipping installation.")
+endif()

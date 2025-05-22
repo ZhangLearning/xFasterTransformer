@@ -24,15 +24,22 @@ project(dependency NONE)
 
 include(ExternalProject)
 
+if(NOT SKIP_BUILD_3RDPARTY_FLAG)
 # cmake-format: off
-ExternalProject_Add(cmdline
-  URL               https://github.com/tanakh/cmdline/archive/refs/heads/master.zip
-  URL_HASH          MD5=69f98dc95edcae8c423a62ceccf81644
-  TIMEOUT           60
-  SOURCE_DIR        ${CMAKE_SOURCE_DIR}/3rdparty/cmdline
-  CONFIGURE_COMMAND ""
-  BUILD_COMMAND     ""
-  INSTALL_COMMAND   ""
-  TEST_COMMAND      ""
-)
+  ExternalProject_Add(cmdline
+    URL               https://github.com/tanakh/cmdline/archive/refs/heads/master.zip
+    URL_HASH          MD5=69f98dc95edcae8c423a62ceccf81644
+    TIMEOUT           60
+    SOURCE_DIR        ${CMAKE_SOURCE_DIR}/3rdparty/cmdline
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND     ""
+    INSTALL_COMMAND   ""
+    TEST_COMMAND      ""
+  )
 # cmake-format: on
+else()
+  if(NOT TARGET cmdline)
+      add_library(cmdline INTERFACE)
+  endif()
+  message(STATUS "cmdline directory already exists. Skipping installation.")
+endif()
