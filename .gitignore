@@ -1,37 +1,9 @@
-# C extensions
-*.so
-
-# logs
-*log
-log-*
-*.csv
 
 # Distribution / packaging
-build/
-
-# vscode
-.vs
-.vscode
+build
 
 # python
-__pycache__/
-*.egg-info/
-dist/
+dist
 
 # 3drparty
-/3rdparty/ig
-/3rdparty/mklml
-/3rdparty/mkl
-/3rdparty/oneCCL
-/3rdparty/oneccl
-/3rdparty/jsoncpp
-/3rdparty/onednn
-/3rdparty/cmdline
-/3rdparty/sentencepiece
-/3rdparty/xdnn
-/3rdparty/gpudnn
-
-
-# MLServer
-.envs
-.metrics
+3rdparty

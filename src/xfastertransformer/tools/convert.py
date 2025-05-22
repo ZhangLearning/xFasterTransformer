@@ -160,7 +160,10 @@ class BaseModelConvert:
         # if model file name is customized, create a symlink to model.safetensors
         if "model_file_base_name" in conf['quantization_config']:
             src_path = "%s/%s.safetensors" % (input_dir, conf['quantization_config']['model_file_base_name'])
-            os.symlink(src_path, input_dir+"/model.safetensors")
+            target = input_dir+"/model.safetensors"
+            if os.path.exists(target) or os.path.islink(target):
+                os.remove(target)
+            os.symlink(src_path, target)
         return
 
     def split_and_convert(self, input_dir, output_dir, dtype, processes):

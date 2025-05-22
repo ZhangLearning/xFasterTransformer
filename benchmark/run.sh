@@ -20,8 +20,10 @@ function cloud_cpu_id() {
 	echo $cpu_index
 }
 
-cores_per_socket=$(lscpu | grep "Core(s) per socket" | awk -F ':' '{print $2}')
-numa_nodes=$(lscpu | grep "NUMA node(s)" | awk -F ':' '{print $2}')
+# cores_per_socket=$(lscpu | grep "Core(s) per socket" | awk -F ':' '{print $2}')
+cores_per_socket=16
+# numa_nodes=$(lscpu | grep "NUMA node(s)" | awk -F ':' '{print $2}')
+numa_nodes=2
 remainder=$(($cores_per_socket % $3))
 front_increment=0
 back_increment=0
@@ -48,7 +50,6 @@ if [ $remainder -gt 0 ]; then
 		front_increment=$(expr $front_increment + $remainder)
 		back_increment=$(expr $back_increment + $remainder)
 	fi
-
 fi
 
 if [ "$XFT_CLOUD_ENV" -eq 1 ]; then
@@ -59,8 +60,14 @@ else
 	cpu_index=$(expr $3 \* $4 + $front_increment)-$(expr $3 \* $4 + $3 - 1 + $back_increment)
 fi
 
-# echo FIRST_TOKEN_WEIGHT_LOCATION=$1 NEXT_TOKEN_WEIGHT_LOCATION=$2 OMP_NUM_THREADS=$3 \
-# 	numactl --all -C $cpu_index -m $2 $BENCHMARK
+# 加载环境变量
+# source /opt/intel/oneapi/setvars.sh --force --ccl-configuration=cpu
+# source /opt/intel/oneapi/ccl/latest/env/vars.sh --ccl-configuration=cpu
+
+
+echo FIRST_TOKEN_WEIGHT_LOCATION=$1 NEXT_TOKEN_WEIGHT_LOCATION=$2 OMP_NUM_THREADS=$3 
+echo CPU_INDEX=$cpu_index BENCHMARK=$BENCHMARK
+
 
 FIRST_TOKEN_WEIGHT_LOCATION=$1 NEXT_TOKEN_WEIGHT_LOCATION=$2 OMP_NUM_THREADS=$3 \
-	numactl --all -C $cpu_index -m $2 $BENCHMARK
+	$BENCHMARK

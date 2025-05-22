@@ -20,15 +20,28 @@ from typing import Any
 from typing import TYPE_CHECKING
 from ctypes import *
 
+xft_version = "2.1.1"
 
 def with_mpirun():
     return any(os.getenv(env) for env in ["MPI_LOCALRANKID", "MPI_LOCALNRANKS", "PMI_RANK", "PMI_SIZE", "PMIX_RANK"])
 
-
 if os.getenv("SINGLE_INSTANCE", "0") == "0" and with_mpirun():
-    cdll.LoadLibrary(os.path.dirname(os.path.abspath(__file__)) + "/libxft_comm_helper.so")
+    library_xft_comm_helper_path = os.path.dirname(os.path.abspath(__file__)) + "/libxft_comm_helper.so"
+    try:
+        cdll.LoadLibrary(library_xft_comm_helper_path)
+    except Exception as e:
+        print(f"libxft_comm_helper.so Failed to load library: {e}")
+        exit(1)
 
-torch.classes.load_library(os.path.dirname(os.path.abspath(__file__)) + "/libxfastertransformer_pt.so")
+library_xft_path = os.path.dirname(os.path.abspath(__file__)) + "/libxfastertransformer_pt.so"
+try:
+    torch.classes.load_library(library_xft_path)
+    print("libxfastertransformer_pt.so loaded successfully!")
+except Exception as e:
+    print(f"libxfastertransformer_pt.so Failed to load library: {e}")
+    exit(1)
+
+
 
 _import_structure = {
     "automodel": ["AutoModel"],
@@ -99,6 +112,8 @@ else:
                 _class_to_module[value] = key
 
         def __getattr__(self, name: str) -> Any:
+            if name == "__version__":
+                return xft_version
             if name in self._modules:
                 value = self._get_module(name)
             elif name in self._class_to_module.keys():
