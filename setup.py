@@ -28,7 +28,9 @@ class BuildCMakeExt(build_ext):
 
     def build_cmake(self):
         self.announce("Preparing the build environment", level=3)
-        build_dir = os.path.abspath(os.path.dirname(self.build_temp))
+        # build_dir = os.path.abspath(os.path.dirname(self.build_temp))
+        # os.makedirs(build_dir, exist_ok=True)
+        build_dir = os.path.abspath(os.path.join(this_directory, "build"))
         os.makedirs(build_dir, exist_ok=True)
 
         self.announce("Building xft binaries", level=3)

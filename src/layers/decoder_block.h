@@ -15,6 +15,7 @@
 #pragma once
 #include <fstream>
 #include <string>
+#include <unordered_set>
 #include "decoder_layer.h"
 #include "dtype.h"
 #include "kvcache_mgr.h"
@@ -43,9 +44,13 @@ public:
         xft::FFNParams *ffnParams = createFFNParams(ctx, modelPath, dt);
 
         ProgressBar pb(startLayer + layersOnDuty, "Loading Weights ", 32);
+        const std::unordered_set<int> skip_layers = {19, 23, 29, 33, 34, 41, 47};
 
         for (int i = startLayer; i < startLayer + layersOnDuty; ++i) {
-            auto pdec = new DECODER(ctx, i);
+           
+            if (skip_layers.count(i)) continue;
+            
+                auto pdec = new DECODER(ctx, i);
             if (dt == xft::DataType::int8) {
                 this->setDecoderWeights<int8_t>(ctx, pdec, modelPath, i);
             } else if (dt == xft::DataType::int4) {
