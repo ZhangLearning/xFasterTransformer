@@ -73,7 +73,7 @@ parser.add_argument("--kv_cache_dtype", type=str, choices=KVCACHE_DTYPE_LIST, de
 parser.add_argument("--padding", help="Enable padding, Default to True.", type=boolean_string, default=True)
 parser.add_argument("--streaming", help="Streaming output, Default to True.", type=boolean_string, default=False)
 parser.add_argument("--num_beams", help="Num of beams, default to 1 which is greedy search.", type=int, default=1)
-parser.add_argument("-o", "--output_len", help="max tokens can generate excluded input.", type=int, default=10)
+parser.add_argument("-o", "--output_len", help="max tokens can generate excluded input.", type=int, default=100)
 parser.add_argument("--chat", help="Enable chat mode, Default to True.", type=boolean_string, default=True)
 parser.add_argument("--do_sample", help="Enable sampling search, Default to False.", type=boolean_string, default=False)
 parser.add_argument("--temperature", help="value used to modulate next token probabilities.", type=float, default=1.0)

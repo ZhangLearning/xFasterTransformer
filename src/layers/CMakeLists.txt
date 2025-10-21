@@ -18,3 +18,6 @@ aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR} LAYERS_SRCS)
 
 add_library(layers OBJECT ${LAYERS_SRCS})
 add_dependencies(layers utils)
+
+include_directories(${MPI_INCLUDE_DIRS})
+include_directories(${ONECCL_INCLUDE_DIRS})

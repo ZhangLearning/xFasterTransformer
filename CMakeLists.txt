@@ -4,7 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+# http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,26 +18,28 @@ project(xfastertransformer LANGUAGES C CXX)
 
 # Enable GPU
 option(WITH_GPU "Build with GPU" OFF)
+
 # if(WITH_GPU)
 # add_definitions(-DXFT_GPU=true)
 # Get compiler version
 message(STATUS "Notice: Building ...")
 execute_process(COMMAND ${CMAKE_CXX_COMPILER} --version
-                OUTPUT_VARIABLE ICPX_VERSION
-                ERROR_QUIET
-                OUTPUT_STRIP_TRAILING_WHITESPACE)
+    OUTPUT_VARIABLE ICPX_VERSION
+    ERROR_QUIET
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
 message(STATUS "Notice: ICPX version: ${ICPX_VERSION}")
+
 # else()
 message(STATUS "Notice: Building with CPU.")
+
 # Get compiler version
 execute_process(COMMAND ${CMAKE_CXX_COMPILER} -dumpfullversion
-                OUTPUT_VARIABLE GCC_VERSION
-                ERROR_QUIET
-                OUTPUT_STRIP_TRAILING_WHITESPACE)
+    OUTPUT_VARIABLE GCC_VERSION
+    ERROR_QUIET
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
 message(STATUS "Notice: GCC version: ${GCC_VERSION}")
+
 # endif()
-
-
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native -fPIC -D_GLIBCXX_USE_CXX11_ABI=1")
 
@@ -53,30 +55,30 @@ else()
 endif()
 
 # GCC>=10.1 should support avx512bf16, but need to double check as some versions have issues
-# if(GCC_VERSION VERSION_GREATER_EQUAL "10.1")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512bf16 -mavx512vl")
+if(GCC_VERSION VERSION_GREATER_EQUAL "10.1")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx512bf16 -mavx512vl")
 
-# Source code for BF16 test
-set(TEST_SOURCE_CODE "#include <immintrin.h>\n#include <cstdio>\nint main() { int buf[8]; _mm256_mask_storeu_epi32((void *)buf, 0xff, (__m256i)_mm512_cvtneps_pbh(_mm512_set1_ps(1.0f))); printf(\"%d\", buf[0]); }")
+    # Source code for BF16 test
+    set(TEST_SOURCE_CODE "#include <immintrin.h>\n#include <cstdio>\nint main() { int buf[8]; _mm256_mask_storeu_epi32((void *)buf, 0xff, (__m256i)_mm512_cvtneps_pbh(_mm512_set1_ps(1.0f))); printf(\"%d\", buf[0]); }")
 
-# Create a temporary file for BF16 test program
-file(WRITE ${CMAKE_BINARY_DIR}/test_avx512bf16.cpp "${TEST_SOURCE_CODE}")
+    # Create a temporary file for BF16 test program
+    file(WRITE ${CMAKE_BINARY_DIR}/test_avx512bf16.cpp "${TEST_SOURCE_CODE}")
 
-# Try to compile the BF16 test program
-try_compile(SUPPORTS_FEATURE
-    ${CMAKE_BINARY_DIR}/test_avx512bf16
-    ${CMAKE_BINARY_DIR}/test_avx512bf16.cpp
-    OUTPUT_VARIABLE TRY_COMPILE_OUTPUT
+    # Try to compile the BF16 test program
+    try_compile(SUPPORTS_FEATURE
+        ${CMAKE_BINARY_DIR}/test_avx512bf16
+        ${CMAKE_BINARY_DIR}/test_avx512bf16.cpp
+        OUTPUT_VARIABLE TRY_COMPILE_OUTPUT
     )
 
-# file(REMOVE ${CMAKE_BINARY_DIR}/test_avx512bf16.cpp)
-# file(REMOVE_RECURSE ${CMAKE_BINARY_DIR}/test_avx512bf16)
+    # file(REMOVE ${CMAKE_BINARY_DIR}/test_avx512bf16.cpp)
+    # file(REMOVE_RECURSE ${CMAKE_BINARY_DIR}/test_avx512bf16)
 
-# Check the result and show an error message if the feature is not supported
-if(NOT SUPPORTS_FEATURE)
-    message(FATAL_ERROR "Error: Your compiler has issues to support avx512bf16.\n We recommend GCC version >= 12.3.0")
+    # Check the result and show an error message if the feature is not supported
+    if(NOT SUPPORTS_FEATURE)
+        message(FATAL_ERROR "Error: Your compiler has issues to support avx512bf16.\n We recommend GCC version >= 12.3.0")
+    endif()
 endif()
-# endif()
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
@@ -94,11 +96,12 @@ else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
 endif()
 
-### Require out-of-source builds
+# ## Require out-of-source builds
 file(TO_CMAKE_PATH "${PROJECT_BINARY_DIR}/CMakeLists.txt" LOC_PATH)
+
 if(EXISTS "${LOC_PATH}")
     message(FATAL_ERROR
-                "You cannot build in a source directory (or any directory with a CMakeLists.txt file). Please make a build subdirectory. Feel free to remove CMakeCache.txt and CMakeFiles."
+        "You cannot build in a source directory (or any directory with a CMakeLists.txt file). Please make a build subdirectory. Feel free to remove CMakeCache.txt and CMakeFiles."
     )
 endif()
 
@@ -138,6 +141,8 @@ if(WITH_GPU)
 endif()
 
 find_package(oneCCL REQUIRED)
+find_package(MPI REQUIRED)
+
 if(MPI_FOUND AND oneCCL_FOUND)
     message(STATUS "oneCCL & MPI found. Using found oneCCL instead of building from source.")
     set(MPI_LIBS MPI::MPI_CXX)
@@ -147,7 +152,7 @@ if(MPI_FOUND AND oneCCL_FOUND)
     message(STATUS "oneCCL include directories: ${ONECCL_INCLUDE_DIRS}")
 
 else()
-    message(FATAL_ERROR  "oneCCL or MPI not found. exit build!!!!")
+    message(FATAL_ERROR "oneCCL or MPI not found. exit build !!!!")
 
     # include("cmake/oneccl.cmake")
     # list(APPEND DEPEND_LIST "oneccl")
@@ -164,15 +169,18 @@ set(3RDPART_LIB_LIST "rt" "dl" "dnnl" "numa")
 list(APPEND 3RDPART_LIB_LIST "mkl_intel_ilp64" "mkl_gnu_thread" "mkl_core" "mkl_gnu_thread")
 
 option(BUILD_WITH_SHARED_LIBS "Build with shared libraries" OFF)
+
 if(BUILD_WITH_SHARED_LIBS)
     message(STATUS "Notice: Building with shared libraries.")
     list(APPEND 3RDPART_LIB_LIST "xdnn")
+
     if(WITH_GPU)
         list(APPEND 3RDPART_LIB_LIST "gpu-dnn")
     endif()
 else()
     message(STATUS "Notice: Building with static libraries.")
     list(APPEND 3RDPART_LIB_LIST "xdnn_static")
+
     if(WITH_GPU)
         list(APPEND 3RDPART_LIB_LIST "gpu-dnn")
     endif()
@@ -180,6 +188,7 @@ endif()
 
 # pipeline parallel feature
 option(WITH_PIPELINE_PARALLEL "Build with pipeline parallel" OFF)
+
 if(WITH_PIPELINE_PARALLEL)
     message(STATUS "Notice: Building with pipeline parallel.")
     add_definitions(-DPIPELINE_PARALLEL=true)
@@ -195,24 +204,28 @@ else()
     # add_definitions(-DAVX512_FP16_WEIGHT_ONLY_FP16=true)
     # add_definitions(-DAVX512_FP16_WEIGHT_ONLY_INT8=true)
     # add_definitions(-DAVX512_FP16_WEIGHT_ONLY_INT4=true)
-    # add_definitions(-DAVX512_BF16_WEIGHT_ONLY_BF16=true)
+    add_definitions(-DAVX512_BF16_WEIGHT_ONLY_BF16=true)
+
     # add_definitions(-DAVX512_FP32_WEIGHT_ONLY_BF16=true)
     add_definitions(-DAVX512_FP32_WEIGHT_ONLY_FP16=true)
     add_definitions(-DAVX512_FP32_WEIGHT_ONLY_INT8=true)
     add_definitions(-DAVX512_FP32_WEIGHT_ONLY_INT4=true)
+
     # add_definitions(-DAVX512_FP32_WEIGHT_ONLY_NF4=true)
-    # Enable AMX_FP16 optimization 
+    # Enable AMX_FP16 optimization
     # add_definitions(-DAMX_FP16_WEIGHT_ONLY_FP16=true)
 endif()
 
-# add_definitions(-DUSE_SHM=true)
+add_definitions(-DUSE_SHM=true)
 option(XFT_BUILD_TESTS "Build xfastertransformer unit tests" OFF)
+
 if(XFT_BUILD_TESTS)
     add_definitions(-DUNDEBUG=true)
 endif()
 
 # timeline event
 option(WITH_TIMELINE "Build with timeline event support" OFF)
+
 if(WITH_TIMELINE)
     message(STATUS "Notice: Building with timeline event support.")
     add_definitions(-DTIMELINE=true)
@@ -226,6 +239,7 @@ endif()
 
 # .so file
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
+
 # exe file
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 
@@ -235,6 +249,7 @@ add_subdirectory(examples/cpp)
 add_subdirectory(tests)
 
 option(XFT_BUILD_EVALUATION "Build xfastertransformer evalution tests" OFF)
+
 if(XFT_BUILD_EVALUATION)
-add_subdirectory(evaluation)
+    add_subdirectory(evaluation)
 endif()

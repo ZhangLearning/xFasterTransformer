@@ -30,15 +30,12 @@ if os.getenv("SINGLE_INSTANCE", "0") == "0" and with_mpirun():
     try:
         cdll.LoadLibrary(library_xft_comm_helper_path)
     except Exception as e:
-        print(f"libxft_comm_helper.so Failed to load library: {e}")
         exit(1)
 
 library_xft_path = os.path.dirname(os.path.abspath(__file__)) + "/libxfastertransformer_pt.so"
 try:
     torch.classes.load_library(library_xft_path)
-    print("libxfastertransformer_pt.so loaded successfully!")
 except Exception as e:
-    print(f"libxfastertransformer_pt.so Failed to load library: {e}")
     exit(1)
 
 

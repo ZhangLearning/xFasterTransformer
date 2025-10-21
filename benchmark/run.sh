@@ -62,12 +62,15 @@ fi
 
 # 加载环境变量
 # source /opt/intel/oneapi/setvars.sh --force --ccl-configuration=cpu
-# source /opt/intel/oneapi/ccl/latest/env/vars.sh --ccl-configuration=cpu
+source /opt/intel/oneapi/ccl/latest/env/vars.sh --ccl-configuration=cpu
 
 
 echo FIRST_TOKEN_WEIGHT_LOCATION=$1 NEXT_TOKEN_WEIGHT_LOCATION=$2 OMP_NUM_THREADS=$3 
 echo CPU_INDEX=$cpu_index BENCHMARK=$BENCHMARK
 
 
+# FIRST_TOKEN_WEIGHT_LOCATION=$1 NEXT_TOKEN_WEIGHT_LOCATION=$2 OMP_NUM_THREADS=$3 \
+# 	$BENCHMARK
+
 FIRST_TOKEN_WEIGHT_LOCATION=$1 NEXT_TOKEN_WEIGHT_LOCATION=$2 OMP_NUM_THREADS=$3 \
-	$BENCHMARK
+	numactl --all -C $cpu_index -m $2 $BENCHMARK

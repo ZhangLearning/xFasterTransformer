@@ -25,3 +25,6 @@ if(WITH_PIPELINE_PARALLEL)
     add_definitions(${MPI_CXX_COMPILE_FLAGS})
     target_link_libraries(models ${MPI_CXX_LIBRARIES})
 endif()
+
+include_directories(${MPI_INCLUDE_DIRS})
+include_directories(${ONECCL_INCLUDE_DIRS})

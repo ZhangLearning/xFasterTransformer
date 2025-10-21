@@ -207,8 +207,8 @@ mkdir -p $logs_dir
 ############# workspace environment check #############
 # Read the expected version from the external file VERSION
 # xft_expected_version=$(head -n 1 ${workspace_dir}/VERSION)
-xft_expected_version=2.0.0
-transformers_expected_version=4.39.0
+xft_expected_version=2.1.2
+transformers_expected_version=4.51.3
 
 # Check if the xfastertransformer software dependency exists in the current Python environment
 if ! python3 -c "import xfastertransformer" &>/dev/null; then
@@ -259,8 +259,8 @@ Warning "Checkpoint(device IP): Please manually update the IP address of the cur
 
 # set your device IP here
 IFACE=eno1
-IP_A=10.100.103.6
-IP_B=10.100.103.5
+IP_A=10.100.103.5
+IP_B=10.100.103.6
 IP_C=192.168.0.3
 IP_D=192.168.0.4
 
@@ -341,19 +341,20 @@ loop_count=1
 beam_width=1
 # input_lengths=("128" "512" "1024" "2016")
 input_lengths=("32")
-output_lengths=("128")
+output_lengths=("32")
 thread_counts=("16")
 # data_types=("fp16" "bf16" "int8" "bf16_fp16" "bf16_int8")
 data_types=("int4")
 kv_cache_dtype=("fp16")
 # model_paths=$(ls -d $workspace_dir/model_config/qwen2-*/)
 model_paths=$(
-  ls -d $workspace_dir/DeepSeek-R1-Distill-Qwen-1.5B-gptqmodel-4bit-xft/
+  ls -d $workspace_dir/data/DeepSeek-R1-Distill-Qwen-1.5B-xft/
+  # ls -d $workspace_dir/data/DeepSeek-R1-Distill-Qwen-7B-xft/
   # ls -d $workspace_dir/model_config/qwen2-0_5b/
   # ls -d $workspace_dir/model_config/qwen2-32b/
   # ls -d $workspace_dir/model_config/qwen2-4b/
   # ls -d $workspace_dir/model_config/qwen2-7b/
-  # ls -d $workspace_dir/model_config/qwen2-14b/ 
+  # ls -d $workspace_dir/model_config/qwen2-14b/
 )
 
 ############# eval BENCHMARK #############
@@ -386,7 +387,7 @@ for model_path in $model_paths; do
                 --beam_width ${beam_width} \
                 --iteration ${loop_count} \
                 --padding False"
-            
+
             export BENCHMARK=$BENCHMARK
             # echo $BENCHMARK
             # 1 device

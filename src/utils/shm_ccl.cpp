@@ -81,7 +81,7 @@ size_t ShmCCL::getSHMSize() {
 
 template <typename T>
 void ShmCCL::reduceAdd(T *sendBuf, T *recvBuf, size_t size, int rank, int rankSize) {
-    printf("ShmCCL::reduceAdd.\n");
+    // printf("ShmCCL::reduceAdd.\n");
     size_t nbytes = sizeof(T) * size;
     size_t nBlockBytes = sizeof(T) * SHM_BLOCK_SIZE;
     int nblocks = (size + SHM_BLOCK_SIZE - 1) / SHM_BLOCK_SIZE;

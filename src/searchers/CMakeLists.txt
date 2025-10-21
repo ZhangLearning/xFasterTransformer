@@ -18,3 +18,6 @@ aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR} SEARCHERS_SRCS)
 
 add_library(searchers OBJECT ${SEARCHERS_SRCS})
 add_dependencies(searchers utils)
+
+include_directories(${MPI_INCLUDE_DIRS})
+include_directories(${ONECCL_INCLUDE_DIRS})
