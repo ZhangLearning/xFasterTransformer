@@ -105,7 +105,7 @@ if(EXISTS "${LOC_PATH}")
     )
 endif()
 
-set(SKIP_BUILD_3RDPARTY_FLAG TRUE)
+set(SKIP_BUILD_3RDPARTY_FLAG False)
 
 # include("cmake/mklml.cmake")
 include("cmake/onednn.cmake")

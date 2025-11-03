@@ -197,7 +197,7 @@ class Qwen3Convert(BaseModelConvert):
                     (param.permute(1, 0), state_dict[k_name].permute(1, 0), state_dict[v_name].permute(1, 0)), dim=1
                 )
                 model_named_parameters[name.replace("self_attn.q_proj.weight", "attention.query_key_value.weight")] = qkv
-                
+
             # for merged weights, skip
             elif "self_attn.k_proj.weight" in name or "self_attn.v_proj.weight" in name:
                 continue
@@ -216,17 +216,17 @@ class Qwen3Convert(BaseModelConvert):
         with tqdm(total=len(model_named_parameters)) as pbar:
             for name, param in model_named_parameters.items():
                 if name == "model.embed_tokens.weight":
-                    param.to(self.torch_dtype).view(self.torch_view_dtype).numpy().tofile(os.path.join(output_dir, "model.wte.bin"))
+                    param.to(self.torch_dtype).view(self.torch_view_dtype).cpu().numpy().tofile(os.path.join(output_dir, "model.wte.bin"))
                     if hf_config["tie_word_embeddings"] == True:
                         param.detach().to(self.torch_dtype).view(self.torch_view_dtype).cpu().numpy().tofile(
                             os.path.join(output_dir, "model.lm_head.weight.bin")
                         )
                 elif name == "model.norm.weight":
-                    param.to(self.torch_dtype).view(self.torch_view_dtype).numpy().tofile(
+                    param.to(self.torch_dtype).view(self.torch_view_dtype).cpu().numpy().tofile(
                         os.path.join(output_dir, "model.final_layernorm.weight.bin")
                     )
                 elif name == "lm_head.weight":
-                    param.to(self.torch_dtype).view(self.torch_view_dtype).numpy().tofile(
+                    param.to(self.torch_dtype).view(self.torch_view_dtype).cpu().numpy().tofile(
                         os.path.join(saved_dir, "model.lm_head.weight.bin")
                     )
                 else:
@@ -241,7 +241,7 @@ class Qwen3Convert(BaseModelConvert):
                                     saved_dir,
                                     factor,
                                     new_name,
-                                    param.to(self.torch_dtype).view(self.torch_view_dtype).numpy(),
+                                    param.to(self.torch_dtype).view(self.torch_view_dtype).cpu().numpy(),
                                     num_attention_heads,
                                     num_key_value_heads,
                                 )
