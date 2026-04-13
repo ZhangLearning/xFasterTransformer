@@ -20,7 +20,7 @@ from typing import Any
 from typing import TYPE_CHECKING
 from ctypes import *
 
-xft_version = "2.1.1"
+xft_version = "2.1.2"
 
 def with_mpirun():
     return any(os.getenv(env) for env in ["MPI_LOCALRANKID", "MPI_LOCALNRANKS", "PMI_RANK", "PMI_SIZE", "PMIX_RANK"])
